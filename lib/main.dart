@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 Future<String> translateText(String text, {String targetLanguage = 'tr'}) async {
-  const apiKey = 'AIzaSyCbbnshSx5O_aMxzTYHM0rkczSuXUJLlJk'; // Replace with your API key
+  const apiKey = ''; // Replace with your API key
 
   final url = 'https://translation.googleapis.com/language/translate/v2?key=$apiKey&source=en&target=$targetLanguage&q=${Uri.encodeQueryComponent(text)}';
 

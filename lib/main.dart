@@ -1,6 +1,27 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+
+import 'dart:convert';
+
+Future<String> translateText(String text, {String targetLanguage = 'tr'}) async {
+  const apiKey = 'AIzaSyCbbnshSx5O_aMxzTYHM0rkczSuXUJLlJk'; // Replace with your API key
+
+  final url = 'https://translation.googleapis.com/language/translate/v2?key=$apiKey&source=en&target=$targetLanguage&q=${Uri.encodeQueryComponent(text)}';
+
+  final response = await http.post(Uri.parse(url));
+
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    final translations = data['data']['translations'];
+    if (translations != null && translations.isNotEmpty) {
+      return translations[0]['translatedText'];
+    }
+  }
+
+  return 'Translation not available';
+}
 
 void main() {
   runApp(MyApp());
@@ -255,13 +276,28 @@ class GeneratorPage extends StatelessWidget {
   }
 }
 
-class BigCard extends StatelessWidget {
+class BigCard extends StatefulWidget {
   const BigCard({
     Key? key,
     required this.pair,
   }) : super(key: key);
 
   final WordPair pair;
+
+  @override
+  BigCardState createState() => BigCardState();
+}
+
+class BigCardState extends State<BigCard> {
+  late Future<String> trPair1;
+  late Future<String> trPair2;
+
+  @override
+  void initState() {
+    super.initState();
+    trPair1 = translateText(widget.pair.first);
+    trPair2 = translateText(widget.pair.second);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -278,19 +314,58 @@ class BigCard extends StatelessWidget {
           duration: Duration(milliseconds: 200),
           // Make sure that the compound word wraps correctly when the window
           // is too narrow.
-          child: MergeSemantics(
-            child: Wrap(
-              children: [
-                Text(
-                  pair.first,
-                  style: style.copyWith(fontWeight: FontWeight.w200),
-                ),
-                Text(
-                  pair.second,
-                  style: style.copyWith(fontWeight: FontWeight.bold),
-                )
-              ],
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                // Use a Row widget to display pair.first and pair.second horizontally
+                children: [
+                  Text(
+                    widget.pair.first,
+                    style: style.copyWith(fontWeight: FontWeight.w200),
+                  ),
+                  Text(
+                    widget.pair.second,
+                    style: style.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              Row(
+                // Use a Row widget to display trPair1 and trPair2 horizontally
+                children: [
+                  FutureBuilder<String>(
+                    future: trPair1,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return CircularProgressIndicator(); // Show a loading indicator while waiting for translation
+                      } else if (snapshot.hasError) {
+                        return Text('Error: ${snapshot.error}'); // Show an error message if translation fails
+                      } else {
+                        return Text(
+                          snapshot.data ?? '', // Display the translated text if available
+                          style: style.copyWith(fontWeight: FontWeight.w100),
+                        );
+                      }
+                    },
+                  ),
+                  FutureBuilder<String>(
+                    future: trPair2,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return CircularProgressIndicator(); // Show a loading indicator while waiting for translation
+                      } else if (snapshot.hasError) {
+                        return Text('Error: ${snapshot.error}'); // Show an error message if translation fails
+                      } else {
+                        return Text(
+                          snapshot.data ?? '', // Display the translated text if available
+                          style: style.copyWith(fontWeight: FontWeight.w100),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
